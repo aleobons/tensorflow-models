@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.2.0-gpu
+FROM tensorflow/tensorflow:2.7.3-gpu
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -11,14 +11,28 @@ RUN apt-get update && apt-get install -y \
     python3-pil \
     python3-lxml \
     python3-tk \
-    wget
+    wget \
+    ffmpeg \
+    libsm6 \
+    libxext6 \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+
+# Install Docker
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+RUN add-apt-repository "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+    $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+RUN apt-get install docker-ce docker-ce-cli
 
 # Install gcloud and gsutil commands
 # https://cloud.google.com/sdk/docs/quickstart-debian-ubuntu
-RUN export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" && \
-    echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
-    apt-get update -y && apt-get install google-cloud-sdk -y
+# RUN export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" && \
+#     echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
+#     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
+#     apt-get update -y && apt-get install google-cloud-sdk -y
 
 # Add new user to avoid running as root
 RUN useradd -ms /bin/bash tensorflow
