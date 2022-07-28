@@ -1,0 +1,15 @@
+artifact_uri: file:///workspaces/tensorflow-models/tensorflow-models/research/object_detection/mlruns/0/0bb1a7c8b4c54544bebc784b9be5ace8/artifacts
+end_time: null
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+name: ''
+run_id: 0bb1a7c8b4c54544bebc784b9be5ace8
+run_uuid: 0bb1a7c8b4c54544bebc784b9be5ace8
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1658519019129
+status: 1
+tags: []
+user_id: tensorflow
