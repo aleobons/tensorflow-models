@@ -10,7 +10,6 @@ import os
 # import unittest
 import numpy as np
 import mlflow
-from pathlib import Path
 
 # import six
 import tensorflow.compat.v1 as tf
@@ -115,13 +114,13 @@ def test_train_loop(sample_tracking_config):
 
     model_pb = os.path.join(model_output, "saved_model.pb")
     # model_artifact_pb = os.path.join(artifact_uri, "saved_model", "saved_model.pb")
-    pipeline_artifact = os.path.join(artifact_uri, "new_pipeline.config")
+    # pipeline_artifact = os.path.join(artifact_uri, "new_pipeline.config")
 
     tensorboard_train = os.path.join(summary_file_path, "train")
     tensorboard_eval = os.path.join(summary_file_path, "eval")
 
     assert os.path.exists(model_pb)
-    assert os.path.exists(Path(pipeline_artifact))
+    # assert os.path.exists(Path(pipeline_artifact))
     assert os.path.exists(metrics_json)
     assert os.path.exists(tensorboard_train)
     assert os.path.exists(tensorboard_eval)
