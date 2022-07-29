@@ -27,14 +27,13 @@ python model_main_tf2.py -- \
   --pipeline_config_path=$PIPELINE_CONFIG_PATH \
   --alsologtostderr
 """
-import json
 import os
 from absl import flags
 import tensorflow.compat.v2 as tf
 import tensorflow.compat.v1 as tf1
 
 from object_detection import model_lib_v2
-from object_detection import core as config
+from object_detection import config
 
 
 tf.get_logger().setLevel("ERROR")
@@ -134,6 +133,10 @@ flags.DEFINE_string("model_output", "model", "Path to model output")
 
 flags.DEFINE_string("tracking_config_path", None, "Path to tracking config")
 
+flags.DEFINE_string(
+    "output_metrics", "outputs/metrics.json", "Path to save metrics json"
+)
+
 
 FLAGS = flags.FLAGS
 
@@ -190,10 +193,6 @@ def main(unused_argv):
         else:
             strategy = tf.compat.v2.distribute.MirroredStrategy()
 
-        def export(data, _):
-            with open("outputs/metrics.json", "w") as f:
-                json.dump(data, f)
-
         input_train = (
             os.path.join(FLAGS.input_train, FLAGS.input_train_pattern)
             if os.path.isdir(FLAGS.input_train)
@@ -218,11 +217,11 @@ def main(unused_argv):
                 record_summaries=FLAGS.record_summaries,
                 checkpoint_max_to_keep=FLAGS.checkpoint_max_to_keep,
                 summary_file_path=FLAGS.summary_file_path,
-                performance_summary_exporter=export,
+                output_metrics=FLAGS.output_metrics,
                 input_train=input_train,
                 input_val=input_val,
                 pipeline_config_override_path=FLAGS.pipeline_config_override_path,
-                tracking_config=tracking_config,
+                tracking_config=tracking_config.tracking_config,
             )
 
 
