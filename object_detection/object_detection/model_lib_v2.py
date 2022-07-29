@@ -22,7 +22,7 @@ import copy
 import os
 import pprint
 import time
-
+import json
 import numpy as np
 import tensorflow.compat.v1 as tf
 
@@ -482,12 +482,13 @@ def train_loop(
     checkpoint_every_n=1000,
     checkpoint_max_to_keep=7,
     record_summaries=True,
-    performance_summary_exporter=None,
+    output_metrics=None,
     summary_file_path=None,
     num_steps_per_iteration=NUM_STEPS_PER_ITERATION,
     input_train=None,
     input_val=None,
     tracking_config=None,
+    # sample_1_of_n_eval_examples=1,
     **kwargs,
 ):
     """Trains a model using eager + functions.
@@ -524,7 +525,7 @@ def train_loop(
         that are controlled by this flag include:
           - Image summaries of training images.
           - Intermediate tensors which maybe logged by meta architectures.
-      performance_summary_exporter: function for exporting performance metrics.
+      output_metrics: path where it will exporting performance metrics.
       num_steps_per_iteration: int, The number of training steps to perform
         in each iteration.
       **kwargs: Additional keyword arguments for configuration override.
@@ -549,6 +550,8 @@ def train_loop(
     kwargs.update(
         {
             "train_steps": train_steps,
+            # "sample_1_of_n_eval_examples": sample_1_of_n_eval_examples,
+            "eval_num_epochs": 1,
             "use_bfloat16": configs["train_config"].use_bfloat16 and use_tpu,
         }
     )
@@ -557,7 +560,7 @@ def train_loop(
     train_config = configs["train_config"]
     train_input_config = configs["train_input_config"]
 
-    if input_train:
+    if input_train is not None:
         train_input_config.tf_record_input_reader.ClearField("input_path")
         train_input_config.tf_record_input_reader.input_path.append(input_train)
 
@@ -641,7 +644,7 @@ def train_loop(
             def learning_rate_fn():
                 return learning_rate
 
-    if tracking_config:
+    if tracking_config is not None:
         log_params(configs, tracking_config.parametros)
 
     # Train the model
@@ -660,7 +663,7 @@ def train_loop(
     eval_input_configs = configs["eval_input_configs"]
     eval_input_config = eval_input_configs[0]
 
-    if input_val:
+    if input_val is not None:
         eval_input_config.tf_record_input_reader.ClearField("input_path")
         eval_input_config.tf_record_input_reader.input_path.append(input_val)
 
@@ -672,6 +675,7 @@ def train_loop(
             model=detection_model,
         )
     )
+
     if summary_file_path is None:
         summary_file_path = os.path.join(model_dir, "eval", eval_input_config.name)
     summary_writer_eval = tf.compat.v2.summary.create_file_writer(
@@ -817,7 +821,7 @@ def train_loop(
                         tf.logging.info(pprint.pformat(logged_dict_np, width=40))
                         logged_step = global_step.value()
 
-                        if tracking_config:
+                        if tracking_config is not None:
                             log_metrics(
                                 name_dataset="train",
                                 metrics_dict_np=logged_dict_np,
@@ -828,6 +832,7 @@ def train_loop(
                         int(global_step.value()) - checkpointed_step
                     ) >= checkpoint_every_n:
                         tf.get_logger().setLevel("ERROR")
+                        # tf.get_logger().setLevel("INFO")
 
                         metrics_valid_dict = eval(
                             eval_input,
@@ -837,7 +842,7 @@ def train_loop(
                             global_step,
                         )
 
-                        if tracking_config:
+                        if tracking_config is not None:
                             log_metrics(
                                 name_dataset="val",
                                 metrics_dict_np=metrics_valid_dict,
@@ -881,15 +886,14 @@ def train_loop(
     clean_temporary_directories(strategy, summary_writer_filepath)
 
     save_results(
-        performance_summary_exporter,
-        kwargs,
         steps_per_sec_list,
         metrics_valid_dict,
         metrics_train_dict,
         tracking_config,
+        output_metrics,
     )
 
-    save_and_log_model(detection_model, input_model_type, model_dir, model_output)
+    save_and_log_model(detection_model, input_model_type, model_output)
 
 
 def calculate_final_metrics_losses(
@@ -942,19 +946,18 @@ def calculate_final_metrics_losses(
 
 
 def save_results(
-    performance_summary_exporter,
-    kwargs,
     steps_per_sec_list,
     metrics_valid_dict,
     metrics_train_dict,
     tracking_config=None,
+    output_metrics=None,
 ):
     metrics_train_dict_np = convert_metrics(metrics_train_dict)
     losses_train_dict_np = convert_metrics(metrics_train_dict)
     metrics_valid_dict_np = convert_metrics(metrics_valid_dict)
     losses_valid_dict_np = convert_metrics(metrics_valid_dict)
 
-    if tracking_config:
+    if tracking_config is not None:
         log_metrics(
             name_dataset="train",
             metrics_dict_np=metrics_train_dict_np,
@@ -979,7 +982,7 @@ def save_results(
             config_metrics=tracking_config.losses,
         )
 
-    if performance_summary_exporter is not None:
+    if output_metrics is not None:
         metrics = {
             "steps_per_sec": np.mean(steps_per_sec_list),
             "steps_per_sec_p50": np.median(steps_per_sec_list),
@@ -989,12 +992,16 @@ def save_results(
             "train_losses": losses_train_dict_np,
             "validation_losses": losses_valid_dict_np,
         }
-        mixed_precision = "bf16" if kwargs["use_bfloat16"] else "fp32"
-        performance_summary_exporter(metrics, mixed_precision)
+        export(metrics, output_metrics=output_metrics)
 
 
-def save_and_log_model(detection_model, input_model_type, path_model, model_output):
-    path_model_artifact = os.path.join(path_model, "saved_model")
+def export(data, output_metrics):
+    with open(output_metrics, "w") as f:
+        json.dump(data, f)
+
+
+def save_and_log_model(detection_model, input_model_type, model_output):
+    # path_model_artifact = os.path.join(path_model, "saved_model")
 
     detection_module = exporter_lib_v2.DETECTION_MODULE_MAP[input_model_type](
         detection_model
@@ -1007,7 +1014,7 @@ def save_and_log_model(detection_model, input_model_type, path_model, model_outp
         signatures=concrete_function,
     )
 
-    mlflow.log_artifacts(model_output, path_model_artifact)
+    mlflow.log_artifacts(local_dir=model_output)
 
 
 def log_params(configs, params):
@@ -1279,10 +1286,8 @@ def eager_eval_loop(
     keypoint_edges = [(kp.start, kp.end) for kp in eval_config.keypoint_edge]
 
     strategy = tf.compat.v2.distribute.get_strategy()
-    # print(f"[INFO] Eval dataset: {eval_dataset}")
+
     for i, (features, labels) in enumerate(eval_dataset):
-        # print(f"[INFO] index: {i}")
-        # print(f"[INFO] type features: {features}")
         try:
             (
                 losses_dict,
@@ -1372,10 +1377,8 @@ def eager_eval_loop(
         eval_metrics[loss_key] = tf.reduce_mean(loss_metrics[loss_key])
 
     eval_metrics = {str(k): v for k, v in eval_metrics.items()}
-    # tf.logging.info('Eval metrics at step %d', global_step.numpy())
     for k in eval_metrics:
         tf.compat.v2.summary.scalar(k, eval_metrics[k], step=global_step)
-        # tf.logging.info('\t+ %s: %f', k, eval_metrics[k])
     return eval_metrics
 
 
