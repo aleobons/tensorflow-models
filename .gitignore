@@ -44,6 +44,11 @@ nosetests.xml
 coverage.xml
 *,cover
 .hypothesis/
+tensorboard/
+model_train/
+model_output/
+metrics.json
+
 
 # Translations
 *.mo
@@ -96,3 +101,6 @@ ENV/
 
 # For mac
 .DS_Store
+
+# MLFLOW
+mlruns/

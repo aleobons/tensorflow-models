@@ -1,0 +1,17 @@
+path_pipeline_config: ./object_detection/samples/configs/ssd_inception_v2_pets.config
+
+# TRACKING CONFIG
+parametros:
+  - train_config.num_steps
+  - train_config.batch_size
+
+metricas:
+  mAP: DetectionBoxes_Precision/mAP
+  mAP.50IOU: DetectionBoxes_Precision/mAP@.50IOU
+  mAP.75IOU: DetectionBoxes_Precision/mAP@.75IOU
+  AR10: DetectionBoxes_Recall/AR@10
+
+losses:
+  total_loss: Loss/total_loss
+
+metrica_para_avaliacao: AR@10

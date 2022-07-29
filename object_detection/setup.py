@@ -3,37 +3,16 @@ import os
 from setuptools import find_packages
 from setuptools import setup
 
-REQUIRED_PACKAGES = [
-    # Required for apache-beam with PY3
-    "avro-python3",
-    "apache-beam",
-    "pillow",
-    "lxml",
-    "matplotlib",
-    "Cython",
-    "contextlib2",
-    "tf-slim",
-    "six",
-    "pycocotools",
-    "lvis",
-    "scipy",
-    "pandas",
-    "tf-models-official==2.7.2",
-    "tensorflow-text==2.7.3",
-    "tensorflow_io",
-    "keras",
-    "pyparsing==2.4.7",
-    "tensorflow==2.7.0",
-    "absl-py==1.2.0",
-    "mlflow==1.27.0",
-    "pydantic==1.9.1",
-    "strictyaml==1.6.1",
-]
+# What packages are required for this module to be executed?
+def list_reqs(fname="requirements.txt"):
+    with open(fname) as fd:
+        return fd.read().splitlines()
+
 
 setup(
     name="object_detection",
     version="0.2",
-    install_requires=REQUIRED_PACKAGES,
+    install_requires=list_reqs(),
     include_package_data=True,
     packages=(
         [p for p in find_packages() if p.startswith("object_detection")]

@@ -12,10 +12,6 @@ from object_detection.utils import config_util
 
 # instantiate
 config = ConfigParser()
-# parse existing file
-# config.read("az_tf_od_api.ini")
-
-# CONFIG_FILE_PATH = Path(config.get("config_files", "config"))
 
 losses_allowed = [
     "Loss/total_loss",
@@ -68,7 +64,7 @@ class TrackingConfig(BaseModel):
     parametros: List[
         constr(regex="^[a-z][a-z0-9\-\_]*(\.[a-z0-9\-\_]*)+([a-z0-9\-\_])+$")
     ]
-    metricas: Dict[str, str]
+    metricas: Dict[constr(regex="^[/\w.\- ]*$"), str]
     losses: Dict[str, str]
 
     # TODO - checar se a métrica existe
@@ -132,18 +128,8 @@ class Config(BaseModel):
     tracking_config: TrackingConfig
 
 
-# def find_config_file() -> Path:
-#     """Locate the configuration file."""
-#     if CONFIG_FILE_PATH.is_file():
-#         return CONFIG_FILE_PATH
-#     raise Exception(f"Config not found at {CONFIG_FILE_PATH!r}")
-
-
 def fetch_config_from_yaml(cfg_path: Path) -> YAML:
     """Parse YAML containing the package configuration."""
-
-    # if not cfg_path:
-    #     cfg_path = find_config_file()
 
     if os.path.exists(cfg_path):
         with open(cfg_path, "r") as conf_file:
@@ -170,6 +156,3 @@ def create_and_validate_config(
     )
 
     return _config
-
-
-# config = create_and_validate_config()
